@@ -1,8 +1,6 @@
 from djitellopy import Tello
 import cv2, math, time
 
-speed_factor = 400
-
 face_cascade = cv2.CascadeClassifier('/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml')
 tracker = None
 startSize = 0
@@ -25,12 +23,13 @@ tello.connect()
 tello.streamoff()
 tello.takeoff()
 tello.send_rc_control(0, 0, 0, 0)
-time.sleep(3)
+time.sleep(1)
 
 tello.streamon()
 
 frame_read = tello.get_frame_read()
 
+statsRefresh = 0
 
 #vid = cv2.VideoCapture(0)
 while True:
@@ -40,26 +39,30 @@ while True:
 	if tracker:
 		ok, bbox = tracker.update(img)
 		if ok:
+			lastSuccessfullTrack = 0
+
 			x, y, w, h = bbox
 			centerX = x + w / 2
 			centerY = y + h / 2
 			size = w * h
 			width, height, channel = img.shape
+			halfWidth = width / 2
+			halfHeight = height / 4
 
-			normDistance = (startSize - size) / (width * height)
-			normHeight = (centerY - height / 2) / height
-			normAngle = (centerX - width / 2) / width
+			def calcSpeed(norm):
+				absNorm = math.fabs(norm)
+				if absNorm > 0.6:
+					return math.copysign(100, norm)
+				elif absNorm > 0.3:
+					return math.copysign(50, norm)
+				elif absNorm > 0.1:
+					return math.copysign(20, norm)
+				else:
+					return 0
 
-			forwardSpeed = speed_factor * (normDistance * normDistance * normDistance)
-			heightSpeed = speed_factor * (normHeight * normHeight * normHeight)
-			rotationSpeed = speed_factor * (normAngle * normAngle * normAngle)
-
-			if math.fabs(forwardSpeed) > 100:
-				forwardSpeed = math.copysign(100, forwardSpeed)
-			if math.fabs(heightSpeed) > 100:
-				heightSpeed = math.copysign(100, heightSpeed)
-			if math.fabs(rotationSpeed) > 100:
-				rotationSpeed = math.copysign(100, rotationSpeed)
+			forwardSpeed = 0 # TODO # calcSpeed((startSize - size) / startSize)
+			heightSpeed = calcSpeed(-1 * (centerY - halfHeight) / halfHeight)
+			rotationSpeed = calcSpeed((centerX - halfWidth) / halfWidth / 2)
 
 			tello.send_rc_control(0, int(forwardSpeed), int(heightSpeed), int(rotationSpeed))
 
@@ -80,13 +83,29 @@ while True:
 	for (x, y, w, h) in faces:
 		cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
+	statsRefresh = statsRefresh - 1
+	if statsRefresh <= 0:
+		droneBattery = str(tello.get_battery()).strip()
+		flightDuration = str(tello.get_flight_time()).strip()
+		statsRefresh = 120
+	cv2.putText(img, droneBattery + "% | " + flightDuration + "s", (5, 15), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0))
+
 	cv2.imshow("drone", img)
 
 	key = cv2.waitKey(1) & 0xff
 	if key == ord('q'):
 		tello.land()
 		frame_read.stop()
+		tello.streamoff()
 		exit(0)
+	elif key == ord('w'):
+		tello.move_up(30)
+	elif key == ord('s'):
+		tello.move_down(30)
+	elif key == ord('a'):
+		tello.rotate_counter_clockwise(20)
+	elif key == ord('d'):
+		tello.rotate_clockwise(20)
 
 	if clickPos:
 		clickX, clickY = clickPos
