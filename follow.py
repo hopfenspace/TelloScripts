@@ -1,6 +1,5 @@
 from djitellopy import Tello
-import cv2
-import math
+import cv2, math, time
 
 speed_factor = 400
 
@@ -20,20 +19,23 @@ cv2.namedWindow("drone")
 cv2.setMouseCallback("drone", onClick)
 
 
-'''tello = Tello()
+tello = Tello()
+tello.connect()
+
+tello.streamoff()
+tello.takeoff()
+tello.send_rc_control(0, 0, 0, 0)
+time.sleep(3)
+
+tello.streamon()
+
 frame_read = tello.get_frame_read()
 
-tello.connect()
-tello.takeoff()'''
 
-
-vid = cv2.VideoCapture(0)
-oldFrame = None
-img = None
+#vid = cv2.VideoCapture(0)
 while True:
-	#while img is oldFrame:
-	#	img = frame_read.frame
-	ok, img = vid.read()
+	img = frame_read.frame
+	#ok, img = vid.read()
 
 	if tracker:
 		ok, bbox = tracker.update(img)
@@ -59,12 +61,12 @@ while True:
 			if math.fabs(rotationSpeed) > 100:
 				rotationSpeed = math.copysign(100, rotationSpeed)
 
-			print(normDistance, normHeight, normAngle, forwardSpeed, heightSpeed, rotationSpeed)
-			#tello.send_rc_control(0, forwardSpeed, heightSpeed, rotationSpeed)
+			tello.send_rc_control(0, int(forwardSpeed), int(heightSpeed), int(rotationSpeed))
 
 			x, y, w, h = int(x), int(y), int(w), int(h)
 			cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 3)
 		else:
+			tello.send_rc_control(0, 0, 0, 0)
 			lastSuccessfullTrack = lastSuccessfullTrack + 1
 			if lastSuccessfullTrack > 60:
 				print("Tracker did not find anything for 60 frames, aborting...")
@@ -82,7 +84,8 @@ while True:
 
 	key = cv2.waitKey(1) & 0xff
 	if key == ord('q'):
-		#tello.land()
+		tello.land()
+		frame_read.stop()
 		exit(0)
 
 	if clickPos:
