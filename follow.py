@@ -18,7 +18,9 @@ cv2.setMouseCallback("drone", onClick)
 
 
 tello = Tello()
-tello.connect()
+if not tello.connect():
+	print("Cannot reach tello, aborting!")
+	exit(1)
 
 tello.streamoff()
 tello.takeoff()
@@ -49,20 +51,17 @@ while True:
 			halfWidth = width / 2
 			halfHeight = height / 4
 
-			def calcSpeed(norm):
+			def calcSpeed(norm, steps):
 				absNorm = math.fabs(norm)
-				if absNorm > 0.6:
-					return math.copysign(100, norm)
-				elif absNorm > 0.3:
-					return math.copysign(50, norm)
-				elif absNorm > 0.1:
-					return math.copysign(20, norm)
-				else:
-					return 0
+				for step, speed in steps:
+					if absNorm > step:
+						return math.copysign(speed, norm)
+
+				return 0
 
 			forwardSpeed = 0 # TODO # calcSpeed((startSize - size) / startSize)
-			heightSpeed = calcSpeed(-1 * (centerY - halfHeight) / halfHeight)
-			rotationSpeed = calcSpeed((centerX - halfWidth) / halfWidth / 2)
+			heightSpeed = calcSpeed(-1 * (centerY - halfHeight) / halfHeight, [(0.6, 100), (0.3, 50), (0.1, 20)])
+			rotationSpeed = calcSpeed((centerX - halfWidth) / halfWidth, [(0.7, 100), (0.5, 50), (0.3, 30), (0.1, 10)])
 
 			tello.send_rc_control(0, int(forwardSpeed), int(heightSpeed), int(rotationSpeed))
 
@@ -86,9 +85,8 @@ while True:
 	statsRefresh = statsRefresh - 1
 	if statsRefresh <= 0:
 		droneBattery = str(tello.get_battery()).strip()
-		flightDuration = str(tello.get_flight_time()).strip()
 		statsRefresh = 120
-	cv2.putText(img, droneBattery + "% | " + flightDuration + "s", (5, 15), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0))
+	cv2.putText(img, droneBattery + "%", (5, 15), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0))
 
 	cv2.imshow("drone", img)
 
