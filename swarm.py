@@ -1,5 +1,4 @@
 import sys, time
-from threading import Thread
 from djitellopy import TelloSwarm
 
 swarm = TelloSwarm.fromFile("ips.txt")

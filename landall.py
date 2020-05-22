@@ -1,5 +1,5 @@
 import time
-from TelloSwarm import TelloSwarm
+from djitellopy import TelloSwarm
 
 swarm = TelloSwarm.fromFile("ips.txt")
 #swarm.takeoff()

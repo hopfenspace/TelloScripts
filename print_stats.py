@@ -1,27 +1,27 @@
 from djitellopy import Tello
 import sys, time
 
-tello = Tello(sys.argv[1])
-if not tello.connect():
-	print("Cannot reach tello, aborting!")
-	exit(1)
+if len(sys.argv) > 1:
+	tello = Tello(sys.argv[1])
+else:
+	tello = Tello()
 
-speed = tello.get_speed()
-battery = tello.get_battery()
-duration = tello.get_flight_time()
-height = tello.get_height()
-distance = tello.get_distance_tof()
-attitude = tello.get_attitude()
-barometer = tello.get_barometer()
-sdk = tello.get_sdk_version()
-serial = tello.get_serial_number()
+tello.connect()
 
-print("Speed = ", speed.strip())
-print("Battery = ", battery.strip())
-print("Duration = ", duration.strip())
-print("Height = ", height.strip())
-print("Distance = ", distance.strip())
-print("Attitude = ", attitude.strip())
-print("Barometer = ", barometer.strip())
+speed = tello.query_speed()
+snr = tello.query_wifi_signal_noise_ratio()
+sdk = tello.query_sdk_version()
+serial = tello.query_serial_number()
+
+print("Speed = ", speed)
+print("Battery = ", tello.get_battery())
+print("Duration = ", tello.get_flight_time())
+print("Height = ", tello.get_height())
+print("Distance = ", tello.get_distance_tof())
+print("Barometer = ", tello.get_barometer())
+print("Attitude = ", tello.get_pitch(), tello.get_roll(), tello.get_yaw())
+print("WiFi SNR = ", snr)
 print("SDK Version = ", sdk)
-print("Serial Number = ", serial.strip())
+print("Serial Number = ", serial)
+
+print(tello.get_current_state())
